@@ -7,10 +7,6 @@ Created on Wed Apr 19 17:41:02 2023
 """
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-
-
-import pandas as pd
 import random
 from datetime import datetime, timedelta, date
 import itertools
