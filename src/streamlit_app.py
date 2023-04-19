@@ -5,16 +5,122 @@ Created on Wed Apr 19 17:41:02 2023
 
 @author: carlessansfuentes
 """
-
 import streamlit as st
+import pandas as pd
+import seaborn as sns
 
-# Define some code
-code = '''
-def hello_world():
-    print("Hello, World!")
+
+import pandas as pd
+import random
+from datetime import datetime, timedelta, date
+import itertools
+
+
+
+
+######### 1. DATA CREATION
+# Define the list of cities
+cities = ['Tokyo', 'Delhi', 'Shanghai', 'Sao Paulo', 'Mexico City', 'Cairo', 'Mumbai', 'Beijing', 'Dhaka', 'Osaka',
+          'New York City', 'Karachi', 'Buenos Aires', 'Chongqing', 'Istanbul', 'Kolkata', 'Manila', 'Lagos', 'Rio de Janeiro', 
+          'Tianjin', 'Kinshasa', 'Guangzhou', 'Los Angeles', 'Moscow', 'Shenzhen', 'Lahore', 'Bangalore', 'Paris', 'Bogotá',
+          'Jakarta', 'Chennai', 'Lima', 'Bangkok', 'Hyderabad', 'London', 'Ljubljana', 'Nanjing', 'Wuhan', 'Ho Chi Minh City',
+          'Luanda', 'Ahmedabad', 'Kuala Lumpur', 'Harbin', 'Hong Kong', 'Houston', 'Montreal', 'Santiago', 'Saint Petersburg',
+          'Madrid', 'Pune', 'Singapore', 'Washington, D.C.', 'Surat', 'Kabul', 'Johannesburg', 'Kanpur', 'Nagoya', 'Yangon', 'Chittagong',
+          'Alexandria', 'Shenyang', 'Qingdao', 'Baghdad', 'Tehran', 'Hanoi', 'Riyadh', 'Rome', 'Dubai', 'Sydney', 'Ankara', 'Taipei', 
+          'Dar es Salaam', 'Tashkent', 'Belo Horizonte', 'Singapore', 'Jeddah', 'Nairobi', 'Calgary', 'Casablanca', 'Abidjan', 'Curitiba', 
+          'Nanjing', 'San Francisco', 'Fortaleza', 'Haifa', 'Baku', 'Budapest', 'Kampala', 'Gujranwala', 'Minsk', 'Warsaw', 'Kazan', 
+          'Rabat', 'Toronto', 'Belgrade', 'Surabaya', 'Houston', 'Zhengzhou', 'Guayaquil', 'Lyon', 'Beirut', 'Madrid', 'Manaus', 'Medellín', 
+          'Melbourne', 'Barcelona', 'Brisbane', 'Chicago', 'Porto Alegre', 'Durban', 'Sofia']
+
+# Define the initial and end dates for each city
+start_date = datetime(2022, 1, 1)
+end_date = datetime(2024, 12, 1)
+
+# Create an empty list to store the data for each city
+data = []
+
+# Loop over the cities and generate a random initial date and end date
+for i in range(1000):
+    city = random.choice(cities)
+    initial_date = start_date + timedelta(days=random.randint(0, 1064))
+    end_date = initial_date + timedelta(days=100)
+    data.append([city, initial_date, end_date])
+
+# Convert the data to a Pandas DataFrame
+df = pd.DataFrame(data, columns=['city', 'initial_date', 'end_date'])
+df.head(5)
+
+
+######### 2. DATA WRANGLING AND INTERSECTION CALCULATION
+# Display the DataFrame
+def has_overlap(a_start, a_end, b_start, b_end, min_days_intersect=2):
+    """
+
+    Parameters
+    ----------
+    a_start : timestamp
+        start_date at place a
+    a_end : TYPE
+        end_date at place a.
+    b_start : TYPE
+        start_date at place b.
+    b_end : TYPE
+        end_date at place b.
+    min_days_intersect : int, optional
+        it is the minimum number of days for intersection be considered. The default is 2. 
+        That means that less than 2 days intersection does not account for intersection
+
+    Returns
+    -------
+    Boolen
+        True if intersects, False otherwise.
+
+    """
+    latest_start = max(a_start, b_start)
+    earliest_end = min(a_end, b_end)
     
-hello_world()
-'''
+    return latest_start+timedelta(days=2) <= earliest_end
+    # d1 = date(2000, 1, 10)
+    # d2 = date(2000, 1, 11)
+    # d3 = date(2000, 1, 15)
+    # d4 = date(2000, 1, 15)
+    #has_overlap(d1,d2,d3,d4)
 
-# Display the code in the Streamlit app
-st.code(code, language='python')
+
+def get_number_of_intersections_by_city(df):
+    unique_cities = df.city.unique()
+    n_intersects = []
+
+    for city in unique_cities:
+        # Subset dataframe by city
+        df_city = df[df.city == city].reset_index(drop=True)
+
+        # Create list of all pairwise combinations of rows in the dataframe
+        n_rows = df_city.shape[0]
+        combinations = list(itertools.combinations(range(n_rows), 2))
+
+        # Count the number of intersections for each pairwise combination of rows
+        n_intersects_bycities = [has_overlap(df_city.initial_date[row_i], df_city.end_date[row_i],
+                                             df_city.initial_date[row_j], df_city.end_date[row_j])
+                                for row_i, row_j in combinations]
+
+        # Append the total number of intersections for the city to the list
+        n_intersects.append(sum(n_intersects_bycities))
+
+    # Create a new dataframe with the total number of intersections for each city
+    data = {'city': unique_cities, 'n_intersects': n_intersects}
+    final_df = pd.DataFrame(data).sort_values(by="n_intersects", ascending=False).reset_index(drop=True)
+
+    return final_df
+
+final_df= get_number_of_intersections_by_city(df)
+
+### 3. VISUALIZATION IN STREAMLIT
+
+# Add sidebar to filter by value
+filter_value = st.sidebar.number_input('Filter value', value=0)
+
+# Filter the DataFrame based on the user's input
+filtered_df = final_df.query('n_intersects > @filter_value')
+# Display the filtered DataFrame
+st.dataframe(filtered_df)
