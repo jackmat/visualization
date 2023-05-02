@@ -131,9 +131,9 @@ df =df_cityplans.merge(final_df, how="outer", on = "city")
 # Add sidebar to filter by value
 with st.sidebar:
     st.title("Filter and Sort Options")
-    column = st.selectbox("Select a column", df.columns[1:])
-    operation = st.selectbox("Select an operation", [">", "<"])
-    value = st.number_input(f"Enter the {column} value", value=0)
+    column = st.selectbox("Select a column to filter on the table", df.columns[1:])
+    operation = st.selectbox("Select based on the column if you want to see bigger or smaller values", [">", "<"])
+    value = st.number_input(f"Enter the {column} value to filter", value=0)
     sort_column = st.selectbox("Select a column for sorting", df.columns[1:])
 
 # Filter the DataFrame based on the selected options
@@ -143,8 +143,12 @@ else:
     filtered_df = df.loc[df[column] < value]
 
 # Sort the filtered DataFrame by the selected column
-sorted_df = filtered_df.sort_values(sort_column)
+sorted_df = filtered_df.sort_values(sort_column, ascending = False)
+st.header("Number of plans intersecting")
+st.info("This visualization is intended to understand how can we evaluate intersections on travel plans")
+st.subheader("Fast explanation of columns")
+st.markdown("n_city: number of times the city appears at a plan")
+st.markdown("n_total: the total potential nº of combinations of the n times a city appears. If it appears 3 times, then total number of combinations without order and repetition are [0,1],[0,2],[1,2]")
+st.markdown("n_intersects: out of n_total, how many intersection plans exist. This number can be bigger than n_city because one plan can intersect more than one with other plans")
 
-# Display the filtered and sorted DataFrame
-st.write(f"Filtered and sorted DataFrame ({operation} {value} for column {column}, sorted by {sort_column}):")
 st.write(sorted_df)
