@@ -131,7 +131,7 @@ df =df_cityplans.merge(final_df, how="outer", on = "city")
 # Add sidebar to filter by value
 with st.sidebar:
     st.title("Filter and Sort Options")
-    column = st.selectbox("Select a column", df_final2.columns[1:])
+    column = st.selectbox("Select a column", df.columns[1:])
     operation = st.selectbox("Select an operation", [">", "<"])
     value = st.number_input(f"Enter the {column} value", value=0)
     sort_column = st.selectbox("Select a column for sorting", df.columns[1:])
