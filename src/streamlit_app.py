@@ -46,7 +46,7 @@ for i in range(1000):
 df = pd.DataFrame(data, columns=['city', 'initial_date', 'end_date'])
 df.head(5)
 
-
+df_cityplans = df.groupby("city").size().reset_index(name="n_city").sort_values(by = "n_city",ascending=False)
 ######### 2. DATA WRANGLING AND INTERSECTION CALCULATION
 # Display the DataFrame
 def has_overlap(a_start, a_end, b_start, b_end, min_days_intersect=2):
@@ -83,40 +83,68 @@ def has_overlap(a_start, a_end, b_start, b_end, min_days_intersect=2):
     #has_overlap(d1,d2,d3,d4)
 
 
-def get_number_of_intersections_by_city(df):
-    unique_cities = df.city.unique()
-    n_intersects = []
 
-    for city in unique_cities:
-        # Subset dataframe by city
-        df_city = df[df.city == city].reset_index(drop=True)
+def get_number_of_intersections_by_city(df, city):
+    # Subset dataframe by city
+    df_city = df[df.city == city].reset_index(drop=True)
 
-        # Create list of all pairwise combinations of rows in the dataframe
-        n_rows = df_city.shape[0]
-        combinations = list(itertools.combinations(range(n_rows), 2))
+    # Create list of all pairwise combinations of rows in the dataframe
+    n_rows = df_city.shape[0]
+    combinations = list(itertools.combinations(range(n_rows), 2))
+    total_n_intersection =len(combinations)
 
-        # Count the number of intersections for each pairwise combination of rows
-        n_intersects_bycities = [has_overlap(df_city.initial_date[row_i], df_city.end_date[row_i],
-                                             df_city.initial_date[row_j], df_city.end_date[row_j])
-                                for row_i, row_j in combinations]
+    # Count the number of intersections for each pairwise combination of rows
+    n_intersects_bycities = [has_overlap(df_city.initial_date[row_i], df_city.end_date[row_i],
+                                         df_city.initial_date[row_j], df_city.end_date[row_j])
+                            for row_i, row_j in combinations]
 
-        # Append the total number of intersections for the city to the list
-        n_intersects.append(sum(n_intersects_bycities))
+    # Append the total number of intersections for the city to the list
+    return total_n_intersection, sum(n_intersects_bycities) 
 
     # Create a new dataframe with the total number of intersections for each city
-    data = {'city': unique_cities, 'n_intersects': n_intersects}
-    final_df = pd.DataFrame(data).sort_values(by="n_intersects", ascending=False).reset_index(drop=True)
 
-    return final_df
+city = "Madrid"
+df_city = df[df.city == city].reset_index(drop=True)
 
-final_df= get_number_of_intersections_by_city(df)
+get_number_of_intersections_by_city(df, "Madrid")
+
+unique_cities = df.city.unique()
+n_total_intersects=[]
+n_intersects = []
+
+for city in unique_cities:
+    total_n_intersection_city, n_intersects_city = get_number_of_intersections_by_city(df, city)
+    n_total_intersects.append(total_n_intersection_city)
+    n_intersects.append(n_intersects_city)
+
+
+data = {'city': unique_cities, 'total_possible_intersections':n_total_intersects ,'n_intersects': n_intersects}
+final_df = pd.DataFrame(data).sort_values(by="n_intersects", ascending=False).reset_index(drop=True)
+
+
+
+df =df_cityplans.merge(final_df, how="outer", on = "city")
+
 
 ### 3. VISUALIZATION IN STREAMLIT
 
 # Add sidebar to filter by value
-filter_value = st.sidebar.number_input('Filter value', value=0)
+with st.sidebar:
+    st.title("Filter and Sort Options")
+    column = st.selectbox("Select a column", df_final2.columns[1:])
+    operation = st.selectbox("Select an operation", [">", "<"])
+    value = st.number_input(f"Enter the {column} value", value=0)
+    sort_column = st.selectbox("Select a column for sorting", df.columns[1:])
 
-# Filter the DataFrame based on the user's input
-filtered_df = final_df.query('n_intersects > @filter_value')
-# Display the filtered DataFrame
-st.dataframe(filtered_df)
+# Filter the DataFrame based on the selected options
+if operation == ">":
+    filtered_df = df.loc[df[column] > value]
+else:
+    filtered_df = df.loc[df[column] < value]
+
+# Sort the filtered DataFrame by the selected column
+sorted_df = filtered_df.sort_values(sort_column)
+
+# Display the filtered and sorted DataFrame
+st.write(f"Filtered and sorted DataFrame ({operation} {value} for column {column}, sorted by {sort_column}):")
+st.write(sorted_df)
